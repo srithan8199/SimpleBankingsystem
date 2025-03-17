@@ -1,24 +1,22 @@
-﻿namespace SimpleBankingSystem
+﻿
+namespace SimpleBankingSystem
 {
     using System;
     using SimpleBankingSystem.Repositories;
     using SimpleBankingSystem.Models;
     using Microsoft.Extensions.Configuration;
     using SimpleBankingSystem.Data;
+   
 
     class Program
     {
         static void Main(string[] args)
         {
             BankingDbContext context = new BankingDbContext();
-            AccountRepository repository = new AccountRepository(context);
+            AccountRepository accountRepository = new AccountRepository(context);
+            TransactionRepository transactionRepository = new TransactionRepository(context);
 
-            if (!AuthenticateUser())
-            {
-                Console.WriteLine("Authentication failed. Exiting application.");
-                return;
-            }
-
+           
             while (true)
             {
                 try
@@ -28,25 +26,29 @@
                     Console.WriteLine("2. Deposit Money");
                     Console.WriteLine("3. Withdraw Money");
                     Console.WriteLine("4. Check Balance");
-                    Console.WriteLine("5. Exit");
+                    Console.WriteLine("5. View Transactions");
+                    Console.WriteLine("6. Exit");
                     Console.Write("Choose an option: ");
                     var choice = Console.ReadLine();
 
                     switch (choice)
                     {
                         case "1":
-                            CreateAccount(repository);
+                            CreateAccount(accountRepository);
                             break;
                         case "2":
-                            DepositMoney(repository);
+                            DepositMoney(accountRepository, transactionRepository);
                             break;
                         case "3":
-                            WithdrawMoney(repository);
+                            WithdrawMoney(accountRepository, transactionRepository);
                             break;
                         case "4":
-                            CheckBalance(repository);
+                            CheckBalance(accountRepository);
                             break;
                         case "5":
+                            ViewTransactions(transactionRepository);
+                            break;
+                        case "6":
                             return;
                         default:
                             Console.WriteLine("Invalid option. Try again.");
@@ -60,27 +62,7 @@
             }
         }
 
-    
-        static bool AuthenticateUser()
-        {
-            Console.WriteLine("Welcome to the Banking System!");
-            Console.Write("Enter Username: ");
-            var username = Console.ReadLine();
-            Console.Write("Enter Password: ");
-            var password = Console.ReadLine();
-
-          
-            if (username == "srithan" && password == "praneeth")
-            {
-                Console.WriteLine("Authentication successful!");
-                return true;
-            }
-            else
-            {
-                Console.WriteLine("Invalid username or password.");
-                return false;
-            }
-        }
+       
 
         static void CreateAccount(AccountRepository repository)
         {
@@ -88,6 +70,12 @@
             {
                 Console.Write("Enter Account Number: ");
                 var accountNumber = Console.ReadLine();
+                if (repository.GetAccount(accountNumber) != null)
+                {
+                    Console.WriteLine("Account with this account number already exists.");
+                    return;
+                }
+
                 Console.Write("Enter Holder Name: ");
                 var holderName = Console.ReadLine();
                 Console.Write("Enter Initial Balance: ");
@@ -109,13 +97,13 @@
             }
         }
 
-        static void DepositMoney(AccountRepository repository)
+        static void DepositMoney(AccountRepository accountRepository, TransactionRepository transactionRepository)
         {
             try
             {
                 Console.Write("Enter Account Number: ");
                 var accountNumber = Console.ReadLine();
-                var account = repository.GetAccount(accountNumber);
+                var account = accountRepository.GetAccount(accountNumber);
 
                 if (account == null)
                 {
@@ -127,7 +115,17 @@
                 var amount = decimal.Parse(Console.ReadLine());
 
                 account.Deposit(amount);
-                repository.UpdateBalance(account);
+                accountRepository.UpdateBalance(account);
+
+                var transaction = new Transaction
+                {
+                    AccountId = account.AccountId,
+                    Amount = amount,
+                    TransactionDate = DateTime.Now,
+                    TransactionType = "Deposit"
+                };
+                transactionRepository.CreateTransaction(transaction);
+
                 Console.WriteLine("Deposit successful!");
             }
             catch (Exception ex)
@@ -136,13 +134,13 @@
             }
         }
 
-        static void WithdrawMoney(AccountRepository repository)
+        static void WithdrawMoney(AccountRepository accountRepository, TransactionRepository transactionRepository)
         {
             try
             {
                 Console.Write("Enter Account Number: ");
                 var accountNumber = Console.ReadLine();
-                var account = repository.GetAccount(accountNumber);
+                var account = accountRepository.GetAccount(accountNumber);
 
                 if (account == null)
                 {
@@ -154,7 +152,17 @@
                 var amount = decimal.Parse(Console.ReadLine());
 
                 account.Withdraw(amount);
-                repository.UpdateBalance(account);
+                accountRepository.UpdateBalance(account);
+
+                var transaction = new Transaction
+                {
+                    AccountId = account.AccountId,
+                    Amount = amount,
+                    TransactionDate = DateTime.Now,
+                    TransactionType = "Withdrawal"
+                };
+                transactionRepository.CreateTransaction(transaction);
+
                 Console.WriteLine("Withdrawal successful!");
             }
             catch (Exception ex)
@@ -182,6 +190,32 @@
             catch (Exception ex)
             {
                 Console.WriteLine($"Error checking balance: {ex.Message}");
+            }
+        }
+
+        static void ViewTransactions(TransactionRepository transactionRepository)
+        {
+            try
+            {
+                Console.Write("Enter Account Number: ");
+                var accountNumber = Console.ReadLine();
+                var transactions = transactionRepository.GetTransactionsByAccountId(accountNumber);
+
+                if (transactions == null || !transactions.Any())
+                {
+                    Console.WriteLine("No transactions found for this account.");
+                    return;
+                }
+
+                Console.WriteLine("Transactions:");
+                foreach (var transaction in transactions)
+                {
+                    Console.WriteLine($"ID: {transaction.TransactionId}, Date: {transaction.TransactionDate}, Type: {transaction.TransactionType}, Amount: {transaction.Amount}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error retrieving transactions: {ex.Message}");
             }
         }
     }

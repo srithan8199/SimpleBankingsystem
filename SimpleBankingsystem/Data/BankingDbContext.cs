@@ -6,6 +6,7 @@ namespace SimpleBankingSystem.Data
     public class BankingDbContext : DbContext
     {
         public DbSet<Account> Accounts { get; set; }
+        public DbSet<Transaction> Transactions { get; set; }    
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
 
@@ -13,11 +14,11 @@ namespace SimpleBankingSystem.Data
         }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.Entity<Account>().Property(a => a.AccountId).ValueGeneratedOnAdd();
+
+            modelBuilder.Entity<Account>().Property(a => a.AccountId).ValueGeneratedOnAdd().UseIdentityColumn().HasColumnOrder(0);
             modelBuilder.Entity<Account>().Property(a => a.Balance).HasDefaultValue(0.00);
             modelBuilder.Entity<Account>().HasIndex(a => a.AccountNumber).IsUnique();
             modelBuilder.Entity<Account>().Property(a => a.AccountNumber).IsRequired();
-            modelBuilder.Entity<Account>().Property(a => a.AccountId).HasColumnOrder(0);
         }
     }
 }

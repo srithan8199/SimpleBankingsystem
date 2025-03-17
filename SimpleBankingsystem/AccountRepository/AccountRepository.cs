@@ -18,7 +18,8 @@ namespace SimpleBankingSystem.Repositories
             {
                 if (_context.Accounts.Any(a => a.AccountNumber == account.AccountNumber))
                 {
-                    throw new Exception("Account with this account number already exists.");
+                    Console.WriteLine("Account with this account number already exists.");
+                    return;
                 }
                 _context.Accounts.Add(account);
                 _context.SaveChanges();
